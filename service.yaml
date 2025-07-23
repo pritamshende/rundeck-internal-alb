@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rundeck-service
+  labels:
+    app: rundeck
+spec:
+  type: ClusterIP
+  ports:
+    - port: 4443
+      targetPort: 4440
+      protocol: TCP
+      name: https
+  selector:
+    app: rundeck 

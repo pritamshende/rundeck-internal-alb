@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rundeck-backend
+  labels:
+    app: rundeck
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: rundeck
+  template:
+    metadata:
+      labels:
+        app: rundeck
+    spec:
+      containers:
+        - name: rundeck
+          image: rundeck/rundeck:4.17.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4440
+              name: rundeck
+          env:
+            - name: RUNDECK_GRAILS_URL
+              value: "https://rundeck-prod.internal.trailways.com"
+            - name: RUNDECK_DATABASE_DRIVER
+              valueFrom:
+                secretKeyRef:
+                  name: rundeck-db-secret
+                  key: type
+            - name: RUNDECK_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rundeck-db-secret
+                  key: jdbc
+            - name: RUNDECK_DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rundeck-db-secret
+                  key: user
+            - name: RUNDECK_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rundeck-db-secret
+                  key: password
+          volumeMounts:
+            - name: rundeck-data
+              mountPath: /home/rundeck/server/data
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4440
+              scheme: HTTP
+            initialDelaySeconds: 240
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4440
+              scheme: HTTP
+            initialDelaySeconds: 180
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+      volumes:
+        - name: rundeck-data
+          persistentVolumeClaim:
+            claimName: rundeck-data-pvc
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      serviceAccountName: rundeck-sa 
